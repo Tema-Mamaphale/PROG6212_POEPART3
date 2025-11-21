@@ -1,0 +1,29 @@
+﻿@{
+    ViewData["Title"] = "Access denied";
+    var role = (string?)ViewBag.CurrentRole ?? "None";
+}
+
+<div class="card p-4">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="icon-pill"><i class="bi bi-shield-lock"></i></span>
+        <h1 class="h4 brand-serif mb-0">Access denied</h1>
+    </div>
+    <p class="text-secondary mb-3">
+        Your current role <strong>@role</strong> is not allowed to open this page,
+        according to the CMCS access control rules.
+    </p>
+
+    <div class="alert alert-warning d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-info-circle me-2"></i>
+        <div>
+            This demonstrates that the system uses <strong>sessions</strong> and
+            <strong>role-based access</strong> so that users cannot access pages they are not
+            supposed to access (as required in the POE).
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a class="btn btn-olive" asp-action="SelectRole"><i class="bi bi-person-badge me-1"></i> Change role</a>
+        <a class="btn btn-light" asp-action="Index"><i class="bi bi-house me-1"></i> Home</a>
+    </div>
+</div>
