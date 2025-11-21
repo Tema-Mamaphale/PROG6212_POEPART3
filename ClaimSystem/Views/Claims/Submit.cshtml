@@ -1,0 +1,276 @@
+﻿@model ClaimSystem.Models.ViewModels.ClaimFormViewModel
+@using ClaimSystem.Models
+
+@{
+    ViewData["Title"] = "Submit Monthly Claim";
+}
+<div class="card p-4 mb-4">
+    <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="icon-pill"><i class="bi bi-file-earmark-plus"></i></span>
+        <h1 class="h3 brand-serif mb-0">Lecturer — Submit Monthly Claim</h1>
+    </div>
+    <p class="lead mb-3">Enter your details, see the total, and send.</p>
+
+    <div class="small stepper mb-3">
+        <div class="step active"><span class="dot">1</span> Details</div>
+        <div class="step"><span class="dot">2</span> Review</div>
+        <div class="step"><span class="dot">3</span> Send</div>
+    </div>
+
+    <form id="claimForm" asp-action="Submit" method="post" enctype="multipart/form-data" novalidate>
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <input type="hidden" asp-for="LecturerName" />
+
+        <div class="row g-3">
+      
+            <div class="col-md-6">
+                <label asp-for="LecturerId" class="form-label">Lecturer</label>
+                <select asp-for="LecturerId"
+                        asp-items="Model.AvailableLecturers"
+                        class="form-select">
+                    <option value="">-- Select your name --</option>
+                </select>
+                <span class="text-danger" asp-validation-for="LecturerId"></span>
+            </div>
+
+            <div class="col-md-6">
+                <div class="d-flex align-items-end gap-2">
+                    <div class="flex-grow-1">
+                        <label asp-for="Month" class="form-label"></label>
+                        <input class="form-control" asp-for="Month" placeholder="e.g., October 2025" aria-describedby="monthHelp" />
+                        <span class="text-danger" asp-validation-for="Month"></span>
+                    </div>
+                    <button type="button" id="useCurrentMonth" class="btn btn-light" title="Use current month">
+                        <i class="bi bi-calendar2-check"></i>
+                    </button>
+                </div>
+                <small id="monthHelp" class="form-text text-muted">Type like “October 2025”.</small>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="HoursWorked" class="form-label"></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-hourglass-split"></i></span>
+          
+                    <input class="form-control" asp-for="HoursWorked" type="number" inputmode="decimal" step="0.5" min="0.5" />
+                </div>
+                <div class="form-text">Half-hours allowed.</div>
+                <span class="text-danger" asp-validation-for="HoursWorked"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="HourlyRate"
+                       class="form-label"
+                       title="Hourly rate is maintained by HR">
+                    Hourly Rate (R)
+                </label>
+                <div class="input-group" title="Rate set by HR; you cannot change it here.">
+                    <span class="input-group-text">
+                        <i class="bi bi-currency-exchange"></i>
+                    </span>
+                    <span class="input-group-text">
+                        <i class="bi bi-lock-fill"></i>
+                    </span>
+           
+                    <input class="form-control"
+                           asp-for="HourlyRate"
+                           type="number"
+                           inputmode="decimal"
+                           step="0.01"
+                           min="1"
+                           readonly />
+                </div>
+                <div class="form-text text-muted small">
+                    Hourly rate is maintained by HR and cannot be edited on this screen.
+                </div>
+                <span class="text-danger" asp-validation-for="HourlyRate"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Calculated Amount</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-calculator"></i></span>
+                    <input id="calcDisplay" class="form-control" value="R 0.00" disabled />
+                </div>
+                <div class="form-text">Updated automatically as you type.</div>
+            </div>
+
+        
+            <div class="col-12">
+                <label asp-for="Notes" class="form-label">Notes (optional)</label>
+                <textarea class="form-control" asp-for="Notes" rows="2" placeholder="Add a short note if needed"></textarea>
+                <span class="text-danger" asp-validation-for="Notes"></span>
+            </div>
+
+      
+            <div class="col-12">
+                <label asp-for="File" class="form-label">Upload Supporting Document</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-paperclip"></i></span>
+                    <input class="form-control" asp-for="File" type="file" required
+                           accept=".pdf,.docx,.xlsx,application/pdf,
+                                   application/vnd.openxmlformats-officedocument.wordprocessingml.document,
+                                   application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                           aria-label="Upload file" />
+                </div>
+                <div class="form-text">Accepted: .pdf, .docx, .xlsx (max 10 MB).</div>
+                <span class="text-danger" asp-validation-for="File"></span>
+                <div id="fileClientError" class="text-danger mt-1" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-olive">
+                <i class="bi bi-send me-1"></i> Submit
+            </button>
+            <a class="btn btn-ghost" asp-action="Status">
+                <i class="bi bi-activity me-1"></i> Track Status
+            </a>
+            <button type="reset" class="btn btn-light">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+    
+        const fmt   = new Intl.NumberFormat('en-ZA', { style:'currency', currency:'ZAR' });
+        const hours = document.getElementById('HoursWorked');
+        const rate  = document.getElementById('HourlyRate');
+        const out   = document.getElementById('calcDisplay');
+
+        function recalc(){
+            const h = parseFloat((hours?.value ?? '0').replace(',', '.')) || 0;
+            const r = parseFloat((rate?.value  ?? '0').replace(',', '.')) || 0;
+            out.value = fmt.format(h * r);
+        }
+        [hours, rate].forEach(el => el?.addEventListener('input', recalc));
+        recalc();
+
+      
+        document.getElementById('useCurrentMonth')?.addEventListener('click', () => {
+            const m = new Date().toLocaleString('en-ZA', { month: 'long', year: 'numeric' });
+            const box = document.getElementById('Month');
+            if (box){ box.value = m; box.dispatchEvent(new Event('input')); }
+        });
+
+        
+        const lecturerSelect = document.getElementById('LecturerId');
+        lecturerSelect?.addEventListener('change', function () {
+            const selected = this.options[this.selectedIndex];
+            const text = selected.text || "";
+
+           
+            const nameOnly = text.split(' (')[0];
+            const nameInput = document.querySelector('input[name="LecturerName"]');
+            if (nameInput) nameInput.value = nameOnly;
+
+         
+            const match = text.match(/\(R\s*([0-9.,]+)\)/);
+            if (match) {
+                const numeric = match[1].replace(',', '.');
+                const r = parseFloat(numeric) || 0;
+                const rateBox = document.getElementById('HourlyRate');
+                if (rateBox) {
+                    rateBox.value = r.toFixed(2);
+                }
+            }
+
+            recalc();
+        });
+
+       
+        const fileInput = document.getElementById('File');
+        const fileErr   = document.getElementById('fileClientError');
+        const MAX = 10 * 1024 * 1024; 
+        const okExt = ['.pdf','.docx','.xlsx'];
+
+        function showFileErr(msg){
+            if (!fileErr) return;
+            fileErr.textContent = msg;
+            fileErr.style.display = msg ? '' : 'none';
+        }
+
+        fileInput?.addEventListener('change', () => {
+            showFileErr('');
+            const f = fileInput.files?.[0];
+            if (!f) return;
+            const name = f.name.toLowerCase();
+            const ext = name.slice(name.lastIndexOf('.'));
+            if (!okExt.includes(ext)){
+                showFileErr('Only .pdf, .docx, or .xlsx files are allowed.');
+                fileInput.value = '';
+                return;
+            }
+            if (f.size > MAX){
+                showFileErr('File too large (max 10 MB).');
+                fileInput.value = '';
+                return;
+            }
+        });
+
+        // ---- Soft validation (friendly confirm on empty/zero) ----
+        const SOFT_REQUIRED = ["LecturerId", "Month", "HoursWorked"];
+        const FRIENDLY = {
+          LecturerId: "Lecturer",
+          Month: "Month",
+          HoursWorked: "Hours Worked"
+        };
+
+        function byId(id){ return document.getElementById(id); }
+        function isEmptyOrZero(input){
+          if (!input) return true;
+          if (input.type === "number") return (input.value === "" || Number(input.value) === 0);
+          return (input.value ?? "").trim() === "";
+        }
+        function markInvalid(input, on){ if (input) input.classList.toggle("is-invalid", !!on); }
+        function softValidate(){
+          const missing = [];
+          for (const id of SOFT_REQUIRED){
+            const el = byId(id);
+            const miss = isEmptyOrZero(el);
+            markInvalid(el, miss);
+            if (miss) missing.push(FRIENDLY[id] ?? id);
+          }
+          return missing;
+        }
+        for (const id of SOFT_REQUIRED){
+          const el = byId(id);
+          el?.addEventListener("input", () => markInvalid(el, false));
+        }
+
+        const form = document.getElementById("claimForm");
+        form?.addEventListener("submit", (e) => {
+          const f = byId("File");
+          const ferr = byId("fileClientError");
+
+          const hasFile = !!(f && f.files && f.files.length > 0);
+          if (!hasFile){
+            e.preventDefault();
+            if (ferr){ ferr.textContent = "Please attach a supporting document (.pdf, .docx, .xlsx)."; ferr.style.display = ""; }
+            f?.focus(); markInvalid(f, true);
+            return;
+          } else {
+            if (ferr){ ferr.textContent = ""; ferr.style.display = "none"; }
+            markInvalid(f, false);
+          }
+
+          const missing = softValidate();
+          if (missing.length > 0){
+            const msg = "Some fields are empty or zero:\n\n• " + missing.join("\n• ")
+                      + "\n\nDo you want to submit anyway?";
+            const firstId = SOFT_REQUIRED.find(id => missing.includes(FRIENDLY[id]));
+            if (firstId) byId(firstId)?.focus();
+            if (!window.confirm(msg)){ e.preventDefault(); return; }
+          }
+        });
+
+        byId("File")?.addEventListener("change", () => markInvalid(byId("File"), false));
+    </script>
+}
