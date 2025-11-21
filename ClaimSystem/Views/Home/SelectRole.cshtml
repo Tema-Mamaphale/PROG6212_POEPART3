@@ -1,0 +1,153 @@
+﻿@{
+    ViewData["Title"] = "Select Role";
+}
+
+<div class="card p-4 mb-4">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="icon-pill"><i class="bi bi-person-badge"></i></span>
+        <h1 class="h4 brand-serif mb-0">Choose a role</h1>
+    </div>
+
+    <p class="text-secondary mb-3">
+        Pick a role to experience the Contract Monthly Claim System from that user’s perspective.
+        Each role only sees the pages it is allowed to use.
+    </p>
+
+    @if (TempData["err"] is string err && !string.IsNullOrWhiteSpace(err))
+    {
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@err
+        </div>
+    }
+    @if (TempData["ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
+    {
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+            <i class="bi bi-check2-circle me-2"></i>@ok
+        </div>
+    }
+
+    <form method="post" asp-action="SelectRole" class="row g-3 mb-4">
+        @Html.AntiForgeryToken()
+
+        <div class="col-md-6 col-lg-3">
+            <button type="submit"
+                    name="role"
+                    value="@ClaimSystem.Models.RoleNames.Lecturer"
+                    class="btn w-100 btn-olive">
+                <i class="bi bi-file-earmark-plus me-1"></i> Lecturer
+            </button>
+            <div class="small text-muted mt-1">
+                Submits monthly claims and uploads supporting documents.
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <button type="submit"
+                    name="role"
+                    value="@ClaimSystem.Models.RoleNames.Coordinator"
+                    class="btn w-100 btn-light">
+                <i class="bi bi-clipboard-check me-1"></i> Programme Coordinator
+            </button>
+            <div class="small text-muted mt-1">
+                Reviews new claims and forwards valid ones to the Academic Manager.
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <button type="submit"
+                    name="role"
+                    value="@ClaimSystem.Models.RoleNames.Manager"
+                    class="btn w-100 btn-light">
+                <i class="bi bi-clipboard2-check me-1"></i> Academic Manager
+            </button>
+            <div class="small text-muted mt-1">
+                Approves or rejects claims escalated by the coordinator.
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <button type="submit"
+                    name="role"
+                    value="@ClaimSystem.Models.RoleNames.HR"
+                    class="btn w-100 btn-light">
+                <i class="bi bi-people me-1"></i> HR
+            </button>
+            <div class="small text-muted mt-1">
+                Manages lecturer profiles and views approved-claims summaries.
+            </div>
+        </div>
+    </form>
+
+    <div class="tile">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-info-circle text-sage"></i>
+            <h2 class="h6 brand-serif mb-0">Demo accounts for marking</h2>
+        </div>
+        <p class="small text-muted mb-3">
+            For this prototype, role selection simulates logging in. The cards below list
+            example credentials and responsibilities for each role, matching the system flow.
+        </p>
+
+        <div class="row row-cols-1 row-cols-md-2 g-3">
+            <div class="col">
+                <div class="border rounded-3 p-3 h-100">
+                    <div class="fw-semibold mb-1">Lecturer / Independent Contractor</div>
+                    <div class="small">
+                        <div><span class="text-muted">Email:</span> <code>lecturer@cmcs.test</code></div>
+                        <div><span class="text-muted">Password:</span> <code>Lec@123</code></div>
+                        <div class="mt-2">
+                            Submits monthly claims, captures hours worked, and uploads supporting documents.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col">
+                <div class="border rounded-3 p-3 h-100">
+                    <div class="fw-semibold mb-1">Programme Coordinator</div>
+                    <div class="small">
+                        <div><span class="text-muted">Email:</span> <code>coordinator@cmcs.test</code></div>
+                        <div><span class="text-muted">Password:</span> <code>Coord@123</code></div>
+                        <div class="mt-2">
+                            Reviews <strong>Submitted</strong> claims and either rejects them or forwards valid
+                            claims to the Academic Manager.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col">
+                <div class="border rounded-3 p-3 h-100">
+                    <div class="fw-semibold mb-1">Academic Manager</div>
+                    <div class="small">
+                        <div><span class="text-muted">Email:</span> <code>manager@cmcs.test</code></div>
+                        <div><span class="text-muted">Password:</span> <code>Man@123</code></div>
+                        <div class="mt-2">
+                            Reviews <strong>Pending Review</strong> claims and gives the final
+                            approve / reject decision.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col">
+                <div class="border rounded-3 p-3 h-100">
+                    <div class="fw-semibold mb-1">HR (Super User)</div>
+                    <div class="small">
+                        <div><span class="text-muted">Email:</span> <code>hr@cmcs.test</code></div>
+                        <div><span class="text-muted">Password:</span> <code>Hr@123</code></div>
+                        <div class="mt-2">
+                            Maintains lecturer information (including hourly rate) and views monthly
+                            summaries of approved claims for reporting.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="small text-muted mt-3">
+            Workflow: <strong>Lecturer</strong> submits → <strong>Programme Coordinator</strong> reviews →
+            <strong>Academic Manager</strong> approves/rejects → <strong>HR</strong> uses the data for reporting.
+        </div>
+    </div>
+</div>
