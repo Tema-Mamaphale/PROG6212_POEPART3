@@ -1,0 +1,115 @@
+﻿@model ClaimSystem.Models.ViewModels.HrMonthlySummaryViewModel
+@{
+    ViewData["Title"] = "HR — Monthly Summary";
+    var selectedMonth = string.IsNullOrWhiteSpace(Model.SelectedMonth)
+        ? (Model.AvailableMonths.FirstOrDefault() ?? "Not selected")
+        : Model.SelectedMonth;
+}
+
+<div class="card p-4 mb-3">
+    <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <span class="icon-pill"><i class="bi bi-people"></i></span>
+            <h1 class="h4 brand-serif mb-0">HR — Monthly Approved Claims Summary</h1>
+        </div>
+        <div class="d-flex gap-2 flex-wrap justify-content-end">
+            <form method="get" class="d-flex gap-2">
+                <div class="input-group">
+                    <label class="input-group-text" for="month"><i class="bi bi-calendar3"></i></label>
+                    <select id="month" name="month" class="form-select">
+                        @if (Model.AvailableMonths.Any())
+                        {
+                            @foreach (var m in Model.AvailableMonths)
+                            {
+                                <option value="@m" selected="@(m == selectedMonth)">@m</option>
+                            }
+
+                           
+                            @if (!Model.AvailableMonths.Contains(selectedMonth, StringComparer.OrdinalIgnoreCase))
+                            {
+                                <option value="@selectedMonth" selected>@selectedMonth</option>
+                            }
+                        }
+                        else
+                        {
+                            <option value="">No months available</option>
+                        }
+                    </select>
+                </div>
+                <button class="btn btn-light" type="submit">
+                    <i class="bi bi-arrow-repeat me-1"></i>Load
+                </button>
+            </form>
+
+            <a class="btn btn-light"
+               asp-controller="HR"
+               asp-action="ExportApprovedForMonthCsv"
+               asp-route-month="@selectedMonth"
+               title="Download CSV for selected month">
+                <i class="bi bi-download me-1"></i>Export (@selectedMonth)
+            </a>
+
+            <a class="btn btn-light"
+               asp-controller="Claims"
+               asp-action="ExportApprovedCsv"
+               title="Download CSV of all approved claims">
+                <i class="bi bi-cloud-download me-1"></i>Export (All)
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card p-3">
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="text-center py-5">
+            <div class="mb-2"><i class="bi bi-inbox fs-1 text-muted"></i></div>
+            <p class="mb-1 brand-serif h5">No approved claims for @selectedMonth</p>
+            <p class="text-muted">Try another month or approve new claims.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Lecturer</th>
+                        <th class="text-end">Total Hours</th>
+                        <th class="text-end">Average Rate</th>
+                        <th class="text-end">Total Amount</th>
+                        <th class="text-end">Invoice</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr>
+                            <td>@r.LecturerName</td>
+                            <td class="text-end">@r.TotalHours.ToString("N2")</td>
+                            <td class="text-end">R @r.AverageRate.ToString("N2")</td>
+                            <td class="text-end fw-semibold">R @r.TotalAmount.ToString("N2")</td>
+                            <td class="text-end">
+                                <a class="btn btn-light btn-sm"
+                                   asp-controller="HR" asp-action="Invoice"
+                                   asp-route-lecturer="@r.LecturerName"
+                                   asp-route-month="@selectedMonth">
+                                    <i class="bi bi-file-earmark-text me-1"></i>View invoice
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="table-light">
+                        <th class="text-end">Grand totals:</th>
+                        <th class="text-end">@Model.GrandTotalHours.ToString("N2")</th>
+                        <th></th>
+                        <th class="text-end">R @Model.GrandTotalAmount.ToString("N2")</th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+</div>
