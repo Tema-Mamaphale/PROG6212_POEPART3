@@ -1,0 +1,73 @@
+﻿@model List<ClaimSystem.Models.Claim>
+@{
+    Layout = "_Layout";
+
+    var hasData = Model != null && Model.Any();
+    var lecturer = hasData ? Model.First().LecturerName : "Unknown lecturer";
+    var month = hasData ? Model.First().Month : "Unknown month";
+    var total = hasData ? Model.Sum(x => x.HoursWorked * x.HourlyRate) : 0m;
+}
+
+<div class="card p-4">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="h4 brand-serif mb-1">Invoice — @lecturer</h1>
+            <div class="text-muted">Month: @month</div>
+            <div class="small text-muted">Includes approved claims only.</div>
+        </div>
+        <div class="text-end">
+            <div class="fw-semibold">Generated: @DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm") UTC</div>
+            <button class="btn btn-light btn-sm mt-2" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i>Print / Save as PDF
+            </button>
+        </div>
+    </div>
+
+    @if (!hasData)
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
+            <p class="brand-serif h5 mb-1">No claims to invoice</p>
+            <p class="text-muted mb-0">Ensure there are approved claims for this lecturer and month.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Notes</th>
+                        <th class="text-end">Hours</th>
+                        <th class="text-end">Rate</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model)
+                    {
+                        <tr>
+                            <td>@c.Id</td>
+                            <td>@(string.IsNullOrWhiteSpace(c.Notes) ? "-" : c.Notes)</td>
+                            <td class="text-end">@c.HoursWorked.ToString("N2")</td>
+                            <td class="text-end">R @c.HourlyRate.ToString("N2")</td>
+                            <td class="text-end">R @c.CalculatedAmount.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="table-light">
+                        <th colspan="4" class="text-end">Total due:</th>
+                        <th class="text-end">R @total.ToString("N2")</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="small text-muted">
+            Payment reference suggestion:
+            <code>@month.Replace(" ", "_")-@lecturer.Replace(" ", "")</code>
+        </div>
+    }
+</div>

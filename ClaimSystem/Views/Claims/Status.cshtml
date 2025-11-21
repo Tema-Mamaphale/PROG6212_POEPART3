@@ -1,0 +1,209 @@
+﻿@model ClaimSystem.Models.Claim
+@using ClaimSystem.Models
+
+@{
+    ViewData["Title"] = "Track Claim";
+
+    bool isEmpty = Model is null || Model.Id == 0;
+
+    int progress = isEmpty ? 0 : Model.Status switch
+    {
+        ClaimStatus.Draft => 15,
+        ClaimStatus.Submitted => 35,
+        ClaimStatus.PendingReview => 65,
+        ClaimStatus.Approved => 100,
+        ClaimStatus.Rejected => 100,
+        _ => 35
+    };
+
+    string badgeClass = isEmpty
+        ? "badge"
+        : Model.Status switch
+        {
+            ClaimStatus.Submitted => "badge badge-submitted",
+            ClaimStatus.PendingReview => "badge badge-review",
+            ClaimStatus.Approved => "badge badge-approved",
+            ClaimStatus.Rejected => "badge badge-rejected",
+            _ => "badge"
+        };
+
+    string progressColorClass = isEmpty
+        ? ""
+        : Model.Status switch
+        {
+            ClaimStatus.Submitted => "progress-submitted",
+            ClaimStatus.PendingReview => "progress-review",
+            ClaimStatus.Approved => "progress-approved",
+            ClaimStatus.Rejected => "progress-rejected",
+            _ => ""
+        };
+
+    string decisionLabel = isEmpty
+        ? "Decision"
+        : Model.Status switch
+        {
+            ClaimStatus.Approved => "Approved",
+            ClaimStatus.Rejected => "Rejected",
+            _ => "Decision"
+        };
+}
+
+<div class="card p-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <span class="icon-pill"><i class="bi bi-activity"></i></span>
+            <h1 class="h3 brand-serif mb-0">Track Claim</h1>
+        </div>
+
+        <div class="quick-links">
+            <a class="btn btn-ghost" asp-action="Submit"><i class="bi bi-plus-circle me-1"></i> Submit</a>
+            <a class="btn btn-light" asp-action="Review"><i class="bi bi-clipboard-check me-1"></i> Review</a>
+        </div>
+    </div>
+
+    @if (TempData["ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
+    {
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+            <i class="bi bi-check2-circle me-2"></i>@ok
+        </div>
+    }
+    @if (TempData["err"] is string err && !string.IsNullOrWhiteSpace(err))
+    {
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@err
+        </div>
+    }
+
+    @if (isEmpty)
+    {
+        <div class="text-center py-5">
+            <div class="display-6 text-muted mb-3"><i class="bi bi-inbox"></i></div>
+            <h2 class="h5 mb-2">No claim to track</h2>
+            <p class="text-muted mb-4">When a lecturer submits a claim, you can track it here from submission to decision.</p>
+            <div class="d-flex justify-content-center gap-2">
+                <a class="btn btn-olive" asp-action="Submit"><i class="bi bi-plus-circle me-1"></i> Submit a Claim</a>
+                <a class="btn btn-light" asp-action="Review"><i class="bi bi-clipboard-check me-1"></i> Go to Review</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            <div class="col-lg-4 col-md-6">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-person text-sage"></i><strong>Lecturer:</strong>
+                    <span data-lecturer>@Model.LecturerName</span>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-calendar3 text-sage"></i><strong>Month:</strong>
+                    <span data-month>@Model.Month</span>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-info-circle text-sage"></i><strong>Status:</strong>
+                    <span class="@badgeClass" data-status-badge>@Model.Status</span>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.AttachmentFileName) && !string.IsNullOrWhiteSpace(Model.AttachmentStoredName))
+        {
+            <div class="mt-3">
+                <i class="bi bi-paperclip text-sage me-1"></i>
+                <strong>Attachment:</strong>
+                <a class="link-underline"
+                   href="~/uploads/claims/@Model.Id/@Model.AttachmentStoredName"
+                   download="@Model.AttachmentFileName">
+                    @Model.AttachmentFileName
+                </a>
+            </div>
+        }
+
+        <div class="stepper my-3">
+            <div class="step @(Model.Status >= ClaimStatus.Submitted ? "active" : "")">
+                <span class="dot">@((Model.Status >= ClaimStatus.Submitted) ? "✓" : "1")</span> Submitted
+            </div>
+            <div class="step @(Model.Status >= ClaimStatus.PendingReview ? "active" : "")">
+                <span class="dot">@((Model.Status >= ClaimStatus.PendingReview) ? "✓" : "2")</span> Under Review
+            </div>
+            <div class="step @(Model.Status is ClaimStatus.Approved or ClaimStatus.Rejected ? "active" : "")">
+                <span class="dot">@((Model.Status is ClaimStatus.Approved or ClaimStatus.Rejected) ? "✓" : "3")</span> @decisionLabel
+            </div>
+        </div>
+
+        <div class="progress mb-3" role="progressbar" aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar @progressColorClass" style="width:@progress%">@progress%</div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a class="btn btn-ghost" asp-action="Submit"><i class="bi bi-arrow-left me-1"></i> Back to Submit</a>
+            <a class="btn btn-light" asp-action="Review"><i class="bi bi-clipboard-check me-1"></i> Back to Review</a>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        const badge = document.querySelector('[data-status-badge]');
+        const bar   = document.querySelector('.progress-bar');
+        const pathId = (location.pathname.match(/\/Status\/(\d+)/) || [])[1];
+        const qsId   = (location.search.match(/id=(\d+)/) || [])[1];
+        const id = pathId || qsId;
+
+        function badgeClassFor(s){
+            if (s === 'Approved')      return 'badge badge-approved';
+            if (s === 'Rejected')      return 'badge badge-rejected';
+            if (s === 'PendingReview') return 'badge badge-review';
+            return 'badge badge-submitted';
+        }
+        function progressClassFor(s){
+            if (s === 'Approved')      return 'progress-approved';
+            if (s === 'Rejected')      return 'progress-rejected';
+            if (s === 'PendingReview') return 'progress-review';
+            return 'progress-submitted';
+        }
+        function pctFor(s){
+            if (s === 'Approved' || s === 'Rejected') return 100;
+            if (s === 'PendingReview') return 65;
+            if (s === 'Submitted')     return 35;
+            return 35;
+        }
+        function decisionFor(s){
+            if (s === 'Approved') return 'Approved';
+            if (s === 'Rejected') return 'Rejected';
+            return 'Decision';
+        }
+
+        async function pollOnce(){
+            if (!id) return;
+            try{
+                const r = await fetch(`/Claims/StatusJson?id=${id}`, { cache:'no-cache' });
+                if (!r.ok) return;
+                const s = await r.json();
+
+                document.querySelector('[data-lecturer]')?.replaceChildren(document.createTextNode(s.lecturer));
+                document.querySelector('[data-month]')?.replaceChildren(document.createTextNode(s.month));
+
+                if (badge){
+                    badge.textContent = s.status;
+                    badge.className = badgeClassFor(s.status);
+                }
+                if (bar){
+                    const p = pctFor(s.status);
+                    bar.style.width = p + '%';
+                    bar.textContent = p + '%';
+                    bar.className = 'progress-bar ' + progressClassFor(s.status);
+                }
+                const steps = document.querySelectorAll('.stepper .step');
+                if (steps.length >= 3) steps[2].lastChild.textContent = ' ' + decisionFor(s.status);
+            } catch { }
+        }
+
+   
+        pollOnce();
+        setInterval(pollOnce, 5000);
+    </script>
+}

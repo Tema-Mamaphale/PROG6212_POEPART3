@@ -1,0 +1,228 @@
+﻿@model List<ClaimSystem.Models.Claim>
+@using ClaimSystem.Models
+
+@{
+    ViewData["Title"] = "Manager Review";
+    var total = Model?.Count ?? 0;
+    var currentMonth = DateTime.UtcNow.ToString("MMMM yyyy");
+
+    var monthsInView = Model?
+        .Select(m => m.Month)
+        .Where(s => !string.IsNullOrWhiteSpace(s))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(s => s)
+        .ToList() ?? new List<string>();
+
+    bool CanDecide(ClaimStatus s) => s == ClaimStatus.PendingReview;
+
+    string StatusBadge(ClaimStatus s) => s switch
+    {
+        ClaimStatus.Submitted => "badge badge-submitted",
+        ClaimStatus.PendingReview => "badge badge-review",
+        ClaimStatus.Approved => "badge badge-approved",
+        ClaimStatus.Rejected => "badge badge-rejected",
+        _ => "badge"
+    };
+}
+@functions {
+    (bool ok, string msg) AutoCheck(Claim c)
+    {
+        if (c.HoursWorked <= 0 || c.HourlyRate <= 0) return (false, "Zero/negative hours or rate");
+        if (c.HoursWorked > 180) return (false, "Hours exceed monthly policy (180)");
+        if (c.HourlyRate < 100 || c.HourlyRate > 1000) return (false, "Hourly rate out of range (R100–R1000)");
+        if (c.CalculatedAmount <= 0) return (false, "Total amount must be greater than zero");
+        if (c.CalculatedAmount <= 5000) return (true, "Low-risk (≤ R5 000)");
+        return (true, "OK");
+    }
+    string AutoBadge(bool ok) => ok ? "badge bg-success-subtle text-success" : "badge bg-danger-subtle text-danger";
+}
+
+<div class="card p-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <span class="icon-pill"><i class="bi bi-clipboard-check"></i></span>
+            <h1 class="h3 brand-serif mb-0">Academic Manager — Pending Reviews</h1>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+           
+            <div class="input-group me-2" style="min-width: 260px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input id="searchBox" class="form-control" placeholder="Search lecturer or month" />
+            </div>
+
+        
+            <div class="input-group me-2" style="min-width: 220px;">
+                <label class="input-group-text" for="monthFilter"><i class="bi bi-calendar3"></i></label>
+                <select id="monthFilter" class="form-select">
+                    <option value="__ALL__" selected>All months</option>
+                    @foreach (var m in monthsInView)
+                    {
+                        <option value="@m">@m</option>
+                    }
+                    @if (!monthsInView.Contains(currentMonth, StringComparer.OrdinalIgnoreCase))
+                    {
+                        <option value="@currentMonth">@currentMonth</option>
+                    }
+                </select>
+            </div>
+
+     
+            <a class="btn btn-light" asp-action="ExportApprovedCsv" title="Download CSV of all approved claims">
+                <i class="bi bi-download me-1"></i>Export Approved (All)
+            </a>
+
+            <a id="exportSelectedBtn" class="btn btn-light"
+               href="@Url.Action("ExportApprovedCsv", "Claims")?month=@Uri.EscapeDataString(currentMonth)"
+               title="Download CSV of approved claims for the selected month">
+                <i class="bi bi-download me-1"></i>Export Approved (Selected)
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
+    {
+        <div class="alert alert-success d-flex align-items-center" role="alert">
+            <i class="bi bi-check2-circle me-2"></i>@ok
+        </div>
+    }
+    @if (TempData["err"] is string err && !string.IsNullOrWhiteSpace(err))
+    {
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@err
+        </div>
+    }
+
+    @if (total == 0)
+    {
+        <div class="text-center py-5">
+            <div class="mb-2"><i class="bi bi-inbox fs-1 text-muted"></i></div>
+            <p class="mb-1 brand-serif h5">No claims pending review</p>
+            <p class="text-muted">Items appear here once a coordinator forwards them.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="claimsTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Lecturer</th>
+                        <th>Month</th>
+                        <th>Hours</th>
+                        <th>Rate</th>
+                        <th>Amount</th>
+                        <th>Attachment</th>
+                        <th>Auto-Check</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model)
+                    {
+                        var check = AutoCheck(c);
+                        var canAct = CanDecide(c.Status) && check.ok;
+                        <tr data-name="@c.LecturerName" data-month="@c.Month" data-status="@c.Status">
+                            <td>@c.Id</td>
+                            <td>@c.LecturerName</td>
+                            <td>@c.Month</td>
+                            <td>@c.HoursWorked.ToString("N2")</td>
+                            <td>R @c.HourlyRate.ToString("N2")</td>
+                            <td>R @c.CalculatedAmount.ToString("N2")</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(c.AttachmentFileName) && !string.IsNullOrWhiteSpace(c.AttachmentStoredName))
+                                {
+                                    <a class="link-underline"
+                                       href="~/uploads/claims/@c.Id/@c.AttachmentStoredName"
+                                       download="@c.AttachmentFileName">
+                                        @c.AttachmentFileName
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="@AutoBadge(check.ok)" title="@check.msg">@((check.ok ? "Pass" : "Fail"))</span>
+                            </td>
+                            <td><span class="@StatusBadge(c.Status)">@c.Status</span></td>
+                            <td class="text-end">
+                                <a class="btn btn-light btn-sm me-1"
+                                   asp-action="Status" asp-route-id="@c.Id" title="Track this claim">
+                                    <i class="bi bi-graph-up-arrow me-1"></i>Track
+                                </a>
+
+                                <form asp-action="ManagerApprove" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@c.Id" />
+                                    <button class="btn btn-olive btn-sm" title="Approve" @(canAct ? null : "disabled")>
+                                        <i class="bi bi-check-lg me-1"></i>Approve
+                                    </button>
+                                </form>
+
+                                <form asp-action="ManagerReject" method="post" class="d-inline ms-1">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@c.Id" />
+                                    <input type="hidden" name="reason" value="Incomplete or incorrect documentation" />
+                                    <button class="btn btn-ghost btn-sm btn-reject" title="Reject" @(canAct ? null : "disabled")>
+                                        <i class="bi bi-x-lg me-1"></i>Reject
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="text-muted small mt-2">
+            Showing <span id="visibleCount">@total</span> of @total claim(s).
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        const q = document.getElementById('searchBox');
+        const monthSel = document.getElementById('monthFilter');
+        const exportSelBtn = document.getElementById('exportSelectedBtn');
+        const rows = () => Array.from(document.querySelectorAll('#claimsTable tbody tr'));
+        const visibleCount = document.getElementById('visibleCount');
+
+        function buildExportHref(selectedMonth) {
+            const base = '@Url.Action("ExportApprovedCsv", "Claims")';
+            if (!selectedMonth || selectedMonth === '__ALL__') {
+                return base + '?month=' + encodeURIComponent('@currentMonth');
+            }
+            return base + '?month=' + encodeURIComponent(selectedMonth);
+        }
+
+        function applyFilters() {
+            const term = (q?.value || "").toLowerCase();
+            const sel = monthSel?.value || '__ALL__';
+            let shown = 0;
+
+            rows().forEach(r => {
+                const name = (r.dataset.name || "").toLowerCase();
+                const month = (r.dataset.month || "").toLowerCase();
+                const status = r.dataset.status;
+
+                const matchesText = !term || name.includes(term) || month.includes(term);
+                const matchesMonth = (sel === '__ALL__') || (r.dataset.month === sel);
+
+                const show = matchesText && matchesMonth && status === "PendingReview";
+                r.style.display = show ? "" : "none";
+                if (show) shown++;
+            });
+
+            if (visibleCount) visibleCount.textContent = shown;
+            if (exportSelBtn) exportSelBtn.href = buildExportHref(sel);
+        }
+
+        q?.addEventListener('input', applyFilters);
+        monthSel?.addEventListener('change', applyFilters);
+        applyFilters();
+    </script>
+}

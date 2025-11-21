@@ -1,0 +1,69 @@
+﻿@model List<ClaimSystem.Models.Claim>
+@using ClaimSystem.Models
+@{
+    ViewData["Title"] = "Claims Tracker";
+}
+
+<div class="card p-4">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="icon-pill"><i class="bi bi-list-check"></i></span>
+        <h1 class="h3 brand-serif mb-0">Claims Tracker</h1>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox h1 d-block mb-2"></i>
+            <div class="lead mb-2">No claim to track</div>
+            <p class="text-muted">When a lecturer submits a claim, you can track it here from submission to decision.</p>
+            <a class="btn btn-mint me-2" href="@Url.Action("Submit", "Claims")"><i class="bi bi-plus-lg me-1"></i>Submit a Claim</a>
+            <a class="btn btn-light" href="@Url.Action("Review", "Claims")"><i class="bi bi-clipboard-check me-1"></i>Go to Review</a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Lecturer</th>
+                        <th>Month</th>
+                        <th>Hours</th>
+                        <th>Rate</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th class="text-end">Track</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.OrderByDescending(x => x.Id))
+                    {
+                        var pill = c.Status switch
+                        {
+                            ClaimStatus.Approved => "badge badge-approved",
+                            ClaimStatus.Rejected => "badge badge-rejected",
+                            ClaimStatus.PendingReview => "badge badge-review",
+                            ClaimStatus.Submitted => "badge badge-submitted",
+                            _ => "badge"
+                        };
+                        <tr>
+                            <td>@c.Id</td>
+                            <td>@c.LecturerName</td>
+                            <td>@c.Month</td>
+                            <td>@c.HoursWorked.ToString("N2")</td>
+                            <td>R @c.HourlyRate.ToString("N2")</td>
+                            <td>R @c.CalculatedAmount.ToString("N2")</td>
+                            <td><span class="@pill" aria-label="Status: @c.Status">@c.Status</span></td>
+                            <td class="text-end">
+                                <a class="btn btn-olive btn-sm" href='@Url.Action("Status", "Claims", new { id = c.Id })'>
+                                    <i class="bi bi-activity me-1"></i> Track
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
